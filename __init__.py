@@ -1,9 +1,6 @@
 import sys
 import os
-import curses
-
-screen = curses.initscr()
-curses.start_color()
+from prompt_toolkit import *
 
 if len(sys.argv) == 2:
     if sys.argv[1].upper() == "GB":
@@ -42,8 +39,11 @@ def get_size(start_path='.'):
                     files_count += 1
                     total_size += os.path.getsize(fp)
 
-    print(files_count, dir_cout)
     return {'ts': total_size, 'ds': dir_cout, 'fs': files_count}
+
+
+def findPercent(value, findFrom):
+    return (value/findFrom) * 100
 
 
 def scanCurDir():
@@ -54,7 +54,6 @@ def scanCurDir():
         size = get_size(name)
         if division > 0:
             size['ts'] = size['ts'] / division
-        print(size)
         sumsize += size['ts']
         sizes.append(size['ts'])
         files.append({'size': size, 'name': name})
@@ -62,41 +61,40 @@ def scanCurDir():
     maxsize = max(sizes)
     avgsize = sumsize / len(files)
 
-    screen.clear()
-    screen.addstr("Files in directory: \n", curses.A_BOLD)
+    print_formatted_text(HTML("\n<b>Files in directory: \n</b>"))
 
-    def printFileString(item, stringDec = curses.A_COLOR):
+    def printFileString(item, stringDec = "label"):
         l_size = item['size']['ts']
         l_dirc = item['size']['ds']
         l_filec = item['size']['fs']
         ostr = "{} {}".format(round(l_size, 3), divisionType)
-        screen.addstr(ostr + (" " * (10 - len(ostr))), stringDec)
+        print_formatted_text(HTML("<" + stringDec + ">" + ostr + (" " * (10 - len(ostr))) + "</" + stringDec + ">"), end="")
         if l_dirc > 0 or l_filec > 0:
-            screen.addstr(" |")
+            print_formatted_text(" |", end="")
             if l_dirc > 0:
-                screen.addstr(" {} folders".format(l_dirc), curses.A_BOLD)
+                print_formatted_text(HTML("<b> {} folders</b>".format(l_dirc)), end="")
             if l_filec > 0:
-                screen.addstr(" {} files".format(l_filec), curses.A_BOLD)
-            screen.addstr(" are inside.")
-        screen.addstr("\n")
+                print_formatted_text(HTML("<b> {} files</b>".format(l_filec)), end="")
+            print_formatted_text(" are inside.", end="")
+        print_formatted_text(" ")
 
     for item in files:
         size = item['size']['ts']
-        screen.addstr("    {}".format(item.get('name', 'Some file')) + (" " * (20 - len(item['name']))) + "| ")
-        if size < (avgsize - maxsize):
-            printFileString(item, curses.A_DIM)
-        elif size > (maxsize - (avgsize / 3)) or size == maxsize:
-            printFileString(item, curses.A_STANDOUT)
-        elif size > (avgsize + (avgsize / 3)):
-            printFileString(item, curses.A_BLINK)
-        elif size > avgsize or size > (avgsize - (avgsize / 3)):
-            printFileString(item, curses.A_BOLD)
+        percent = findPercent(size, maxsize)
+        print_formatted_text(HTML("    {}".format(item.get('name', 'Some file')) + (" " * (20 - len(item['name']))) + "| "), end="")
+        if percent > 90 or size == maxsize:
+            printFileString(item, "ansired")
+        elif percent > 75:
+            printFileString(item, "ansiorange")
+        elif percent > 50:
+            printFileString(item, "ansiyellow")
+        elif percent > 25:
+            printFileString(item, "ansigreen")
+        elif percent > 10:
+            printFileString(item, "ansiwhite")
         else:
             printFileString(item)
-    screen.addstr("Total: {} {}".format(round(sumsize, 3), divisionType), curses.A_BOLD)
+    print_formatted_text(HTML("\n<b>Total: {} {}</b>".format(round(sumsize, 3), divisionType)))
 
-
-scanCurDir()
-
-c = screen.getch()
-curses.endwin()
+if __name__ == '__main__':
+    scanCurDir()
