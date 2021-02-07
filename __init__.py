@@ -1,6 +1,7 @@
 import sys
 import os
 from prompt_toolkit import *
+from prompt_toolkit.completion import NestedCompleter
 
 if len(sys.argv) == 2:
     if sys.argv[1].upper() == "GB":
@@ -43,7 +44,7 @@ def get_size(start_path='.'):
 
 
 def findPercent(value, findFrom):
-    return (value/findFrom) * 100
+    return (value / findFrom) * 100
 
 
 def scanCurDir():
@@ -61,14 +62,16 @@ def scanCurDir():
     maxsize = max(sizes)
     avgsize = sumsize / len(files)
 
+    os.system("cls")
     print_formatted_text(HTML("\n<b>Files in directory: \n</b>"))
 
-    def printFileString(item, stringDec = "label"):
+    def printFileString(item, stringDec="label"):
         l_size = item['size']['ts']
         l_dirc = item['size']['ds']
         l_filec = item['size']['fs']
         ostr = "{} {}".format(round(l_size, 3), divisionType)
-        print_formatted_text(HTML("<" + stringDec + ">" + ostr + (" " * (10 - len(ostr))) + "</" + stringDec + ">"), end="")
+        print_formatted_text(HTML("<" + stringDec + ">" + ostr + (" " * (10 - len(ostr))) + "</" + stringDec + ">"),
+                             end="")
         if l_dirc > 0 or l_filec > 0:
             print_formatted_text(" |", end="")
             if l_dirc > 0:
@@ -81,7 +84,8 @@ def scanCurDir():
     for item in files:
         size = item['size']['ts']
         percent = findPercent(size, maxsize)
-        print_formatted_text(HTML("    {}".format(item.get('name', 'Some file')) + (" " * (20 - len(item['name']))) + "| "), end="")
+        print_formatted_text(
+            HTML("    {}".format(item.get('name', 'Some file')) + (" " * (20 - len(item['name']))) + "| "), end="")
         if percent > 90 or size == maxsize:
             printFileString(item, "ansired")
         elif percent > 75:
@@ -95,6 +99,57 @@ def scanCurDir():
         else:
             printFileString(item)
     print_formatted_text(HTML("\n<b>Total: {} {}</b>".format(round(sumsize, 3), divisionType)))
+    return files
+
+
+def getFilesNames(f):
+    names = []
+    for item in f:
+        names.append(item['name'])
+    return names
+
+
+def getFolders(f):
+    names = []
+    for item in f:
+        if os.path.isdir(item):
+            names.append(item)
+    return names
+
 
 if __name__ == '__main__':
-    scanCurDir()
+    end = False
+    session = PromptSession()
+    while not end:
+        files = getFilesNames(scanCurDir())
+        folders = [".."] + getFolders(files)
+
+        completer = NestedCompleter.from_nested_dict({
+            'cd': {item: None for item in folders},
+            'rm': {item: None for item in files},
+            'exit': None,
+        })
+
+        input = session.prompt("> ", vi_mode=True, completer=completer,
+                               bottom_toolbar=HTML("<italic>{}</italic>".format(os.getcwd()))).split(" ")
+        if input[0]:
+            if input[0] == "exit":
+                end = True
+            elif input[0] == "rm":
+                if input[1]:
+                    os.remove(input[1])
+                else:
+                    prompt("Wrong amount of arguments. Type 'rm <filename>'")
+            elif input[0] == "cd":
+                if input[1]:
+                    if os.path.isdir(input[1]):
+                        os.chdir(input[1])
+                    else:
+                        if os.path.isfile(input[1]):
+                            prompt("This is file, you can`t go inside it!")
+                        else:
+                            prompt("Can`t find folder.")
+                else:
+                    prompt("Wrong amount of arguments. Type 'cd <foldername>'")
+            else:
+                os.system("".join(input))
