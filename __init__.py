@@ -1,5 +1,6 @@
 import sys
 import os
+import shutil
 from prompt_toolkit import *
 from prompt_toolkit.completion import NestedCompleter
 
@@ -48,58 +49,70 @@ def findPercent(value, findFrom):
 
 
 def scanCurDir():
-    files = []
-    sizes = []
-    sumsize = 0
-    for name in os.listdir():
-        size = get_size(name)
-        if division > 0:
-            size['ts'] = size['ts'] / division
-        sumsize += size['ts']
-        sizes.append(size['ts'])
-        files.append({'size': size, 'name': name})
-    minsize = min(sizes)
-    maxsize = max(sizes)
-    avgsize = sumsize / len(files)
+    try:
+        os.system("cls")
+        files = []
+        sizes = []
+        sumsize = 0
+        for name in os.listdir():
+            size = get_size(name)
+            if division > 0:
+                size['ts'] = size['ts'] / division
+            sumsize += size['ts']
+            sizes.append(size['ts'])
+            files.append({'size': size, 'name': name})
+        if len(sizes) <= 0:
+            ex = ValueError()
+            ex.strerror = "Folder is empty!"
+            raise ex
+        minsize = min(sizes)
+        maxsize = max(sizes)
+        avgsize = sumsize / len(files)
 
-    os.system("cls")
-    print_formatted_text(HTML("\n<b>Files in directory: \n</b>"))
+        print_formatted_text(HTML("\n<b>Files in directory: \n</b>"))
 
-    def printFileString(item, stringDec="label"):
-        l_size = item['size']['ts']
-        l_dirc = item['size']['ds']
-        l_filec = item['size']['fs']
-        ostr = "{} {}".format(round(l_size, 3), divisionType)
-        print_formatted_text(HTML("<" + stringDec + ">" + ostr + (" " * (10 - len(ostr))) + "</" + stringDec + ">"),
-                             end="")
-        if l_dirc > 0 or l_filec > 0:
-            print_formatted_text(" |", end="")
-            if l_dirc > 0:
-                print_formatted_text(HTML("<b> {} folders</b>".format(l_dirc)), end="")
-            if l_filec > 0:
-                print_formatted_text(HTML("<b> {} files</b>".format(l_filec)), end="")
-            print_formatted_text(" are inside.", end="")
-        print_formatted_text(" ")
+        def printFileString(item, stringDec="label"):
+            l_size = item['size']['ts']
+            l_dirc = item['size']['ds']
+            l_filec = item['size']['fs']
+            ostr = "{} {}".format(round(l_size, 3), divisionType)
+            print_formatted_text(HTML("<" + stringDec + ">" + ostr + (" " * (10 - len(ostr))) + "</" + stringDec + ">"),
+                                 end="")
+            if l_dirc > 0 or l_filec > 0:
+                print_formatted_text(" |", end="")
+                if l_dirc > 0:
+                    print_formatted_text(HTML("<b> {} folders</b>".format(l_dirc)), end="")
+                if l_filec > 0:
+                    print_formatted_text(HTML("<b> {} files</b>".format(l_filec)), end="")
+                print_formatted_text(" are inside.", end="")
+            print_formatted_text(" ")
 
-    for item in files:
-        size = item['size']['ts']
-        percent = findPercent(size, maxsize)
-        print_formatted_text(
-            HTML("    {}".format(item.get('name', 'Some file')) + (" " * (20 - len(item['name']))) + "| "), end="")
-        if percent > 90 or size == maxsize:
-            printFileString(item, "ansired")
-        elif percent > 75:
-            printFileString(item, "ansiorange")
-        elif percent > 50:
-            printFileString(item, "ansiyellow")
-        elif percent > 25:
-            printFileString(item, "ansigreen")
-        elif percent > 10:
-            printFileString(item, "ansiwhite")
-        else:
-            printFileString(item)
-    print_formatted_text(HTML("\n<b>Total: {} {}</b>".format(round(sumsize, 3), divisionType)))
-    return files
+        for item in files:
+            size = item['size']['ts']
+            percent = findPercent(size, maxsize)
+            print_formatted_text(
+                HTML("    {}".format(item.get('name', 'Some file')) + (" " * (20 - len(item['name']))) + "| "), end="")
+            if percent > 90 or size == maxsize:
+                printFileString(item, "ansired")
+            elif percent > 75:
+                printFileString(item, "ansiorange")
+            elif percent > 50:
+                printFileString(item, "ansiyellow")
+            elif percent > 25:
+                printFileString(item, "ansigreen")
+            elif percent > 10:
+                printFileString(item, "ansiwhite")
+            else:
+                printFileString(item)
+        print_formatted_text(HTML("\n<b>Total: {} {}</b>".format(round(sumsize, 3), divisionType)))
+    except ValueError as e:
+        print_formatted_text(HTML("<ansired><b>{}</b></ansired>").format(e.strerror))
+        os.chdir("..")
+    except:
+        print_formatted_text(HTML("<ansired><b>ERROR OCCURED!</b></ansired>"))
+        prompt()
+    finally:
+        return files
 
 
 def getFilesNames(f):
@@ -136,20 +149,30 @@ if __name__ == '__main__':
             if input[0] == "exit":
                 end = True
             elif input[0] == "rm":
-                if input[1]:
-                    os.remove(input[1])
+                input.pop(0)
+                if input[0]:
+                    input = " ".join(input)
+                    if os.path.isdir(input):
+                        shutil.rmtree(input)
+                    else:
+                        if os.path.isfile(input):
+                            os.remove(input)
+                        else:
+                            prompt("Can`t find.")
                 else:
                     prompt("Wrong amount of arguments. Type 'rm <filename>'")
             elif input[0] == "cd":
-                if input[1]:
-                    if os.path.isdir(input[1]):
-                        os.chdir(input[1])
+                input.pop(0)
+                if input[0]:
+                    input = " ".join(input)
+                    if os.path.isdir(input):
+                        os.chdir(input)
                     else:
-                        if os.path.isfile(input[1]):
+                        if os.path.isfile(input):
                             prompt("This is file, you can`t go inside it!")
                         else:
                             prompt("Can`t find folder.")
                 else:
                     prompt("Wrong amount of arguments. Type 'cd <foldername>'")
             else:
-                os.system("".join(input))
+                os.system(" ".join(input))
