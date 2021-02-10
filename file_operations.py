@@ -1,8 +1,5 @@
-import sys
 import os
-import shutil
 from prompt_toolkit import *
-from prompt_toolkit.completion import NestedCompleter
 
 def get_size(start_path='.'):
     total_size = 0
